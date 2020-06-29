@@ -11,7 +11,7 @@ job("Job 1"){
         shell('''
         sudo rm -rf /data
         sudo mkdir /data
-		    sudo cp -rvf * /data
+        sudo cp -rvf * /data
 		''')
     }
 }
