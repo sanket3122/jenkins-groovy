@@ -1,0 +1,82 @@
+job("Job 1"){
+  description("This is first job of groovy project")
+	scm {
+		github('sanket3122/jenkins-groovy','master')
+	}
+     		
+	triggers {
+		scm("* * * * *")
+	}
+     steps {
+        shell('''
+        sudo rm -rf /data
+        sudo mkdir /data
+		    sudo cp -rvf * /data
+		''')
+    }
+}
+job("Job 2"){
+  description("This is second job of groovy project")
+	triggers {
+        upstream('Job 1', 'SUCCESS')
+    }
+     steps {
+        shell('''
+		cd /data
+		if ls | grep .html
+		then
+		if sudo kubectl get pods | grep html-deploy
+		then
+		echo "Already Running"
+		else
+		sudo kubectl delete all --all
+		sudo kubectl run html-pod --image=httpd
+		sleep 30
+		sudo kubectl cp *.html  html-pod:/usr/local/apache2/htdocs
+		sudo kubectl expose pods html-pod --type=NodePort --port=80
+		fi
+		elif ls| grep .php
+		then
+		if sudo kubectl get pods | grep php-deploy
+		then
+		echo "Already Running"
+		else
+		sudo kubectl delete all --all
+		sudo kubectl run php-pod --image=php:latest
+		sleep 30
+		sudo kubectl cp * php-pod:/usr/src/myapp
+		sudo kubectl expose pod php-pod --type=NodePort --port=80
+		fi
+		fi
+		''')
+    }
+}
+job("Job 3")
+{
+	description("This is third job of groovy project")
+	triggers {
+        upstream('Job 2', 'SUCCESS')
+    }
+	 steps {
+        shell('''
+	if sudo kubectl get pods | grep pod
+	then
+	echo " Website is working properly!!"
+	else
+	cd /data
+	python3 pods_failure_mail.py
+	fi
+	''')
+      }
+}
+
+buildPipelineView('Groovy project') {
+    filterBuildQueue()
+    filterExecutors()
+    title('Groovy Pipeline')
+    displayedBuilds(3)
+    selectedJob('Groovy 1')
+    alwaysAllowManualTrigger()
+    showPipelineParameters()
+    refreshFrequency(30)
+}
